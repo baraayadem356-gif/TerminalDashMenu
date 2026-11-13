@@ -11,12 +11,11 @@ struct GeneratedLevelConcept {
     std::string name;
     std::string difficulty;
     ccColor3B diffColor;
-    int speedMode; // 1 = 1x, 2 = 2x, 3 = 3x, 4 = 4x
+    int speedMode;
     int primaryColor;
     int secondaryColor;
 };
 
-// 10 brand-new, procedurally generated custom levels with custom gameplay rules
 static const std::vector<GeneratedLevelConcept> GENERATED_LEVELS = {
     { "Terminal Chaos",    "Hard (5*)",       { 255, 220, 0 }, 2, 3, 11 },
     { "Quantum Dash",      "Insane (10*)",    { 255, 60, 200 }, 3, 8, 2 },
@@ -30,35 +29,28 @@ static const std::vector<GeneratedLevelConcept> GENERATED_LEVELS = {
     { "Terminal Dash 3",   "Extreme Demon",   { 150, 0, 255 }, 4, 11, 4 }
 };
 
-// Global tracker for which generated level is currently active
 static int g_activeGeneratedLevelIndex = -1;
 
 class ProceduralPlayLayer : public PlayLayer {
 public:
     void postUpdate(float dt) {
         PlayLayer::postUpdate(dt);
-        
-        // Dynamically inject custom obstacles and triggers as the player progresses
         if (g_activeGeneratedLevelIndex >= 0 && m_player1) {
             float playerX = m_player1->getPositionX();
-            
-            // Example procedural generation hook: spawn dynamic hazards ahead of the player
-            // You can spawn custom GameObject IDs here using LevelEditorLayer or object factories!
         }
     }
 };
 
-class ProceduralLevelsPopup : public geode::Popup {
+class ProceduralLevelsPopup : public Popup {
 protected:
-    bool init() override {
-        if (!Popup::init(380.f, 270.f)) return false;
+    bool setup() override {
+        auto winSize = CCDirector::sharedDirector()->getWinSize();
 
         this->setTitle("Playable Procedural Levels");
-        auto contentSize = m_mainLayer->getContentSize();
 
         auto gridMenu = CCMenu::create();
         gridMenu->setContentSize({ 340.f, 205.f });
-        gridMenu->setPosition({ contentSize.width / 2.f, contentSize.height / 2.f - 10.f });
+        gridMenu->setPosition({ winSize.width / 2.f, winSize.height / 2.f - 10.f });
 
         gridMenu->setLayout(
             RowLayout::create()
@@ -91,18 +83,16 @@ protected:
             int levelIndex = static_cast<int>(i);
             auto btn = CCMenuItemExt::createSpriteExtra(
                 card,
-                [this, levelIndex](CCMenuItemSpriteExtra*) {
+                [this, levelIndex](CCObject*) {
                     g_activeGeneratedLevelIndex = levelIndex;
                     this->onClose(nullptr);
 
-                    // Create a blank custom level object in memory
                     auto level = GJGameLevel::create();
                     level->m_levelName = GENERATED_LEVELS[levelIndex].name;
                     level->m_levelID = 99990 + levelIndex;
                     level->m_levelType = GJLevelType::Editor;
-                    level->m_audioTrack = 15; // Clutterfunk track ID
+                    level->m_audioTrack = 15;
                     
-                    // Launch into PlayLayer using the newly generated level structure
                     auto scene = PlayLayer::scene(level, false, false);
                     CCDirector::sharedDirector()->replaceScene(
                         CCTransitionFade::create(0.5f, scene)
@@ -122,11 +112,11 @@ protected:
 public:
     static ProceduralLevelsPopup* create() {
         auto ret = new ProceduralLevelsPopup();
-        if (ret->init()) {
+        if (ret && ret->initAnchored(380.f, 270.f, "square001_001.png", { 0.f, 0.f, 0.f, 180.f })) {
             ret->autorelease();
             return ret;
         }
-        delete ret;
+        CC_SAFE_DELETE(ret);
         return nullptr;
     }
 };
@@ -147,7 +137,7 @@ class $modify(MyMenuLayer, MenuLayer) {
 
         auto btn = CCMenuItemExt::createSpriteExtra(
             spr,
-            [](CCMenuItemSpriteExtra*) {
+            [](CCObject*) {
                 ProceduralLevelsPopup::create()->show();
             }
         );
